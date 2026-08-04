@@ -8,12 +8,13 @@ from modules.crc_calculator import CRCCalculatorWidget
 from modules.network_test import NetworkTestWidget
 from modules.coordinate_converter import CoordinateConverterWidget
 from modules.serial_terminal import SerialTerminalWidget
+from modules.hex_viewer import HexViewerWidget
 
 class AETDashboard(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AIROBOS Engineering Toolkit")
-        self.setGeometry(100, 100, 900, 600)
+        self.setGeometry(100, 100, 950, 600) # Hex ekranı sığsın diye genişliği biraz artırdık
         
         merkezi_widget = QWidget()
         self.setCentralWidget(merkezi_widget)
@@ -43,24 +44,27 @@ class AETDashboard(QMainWindow):
         ilk_sayfa.setStyleSheet("font-size: 16px; font-weight: bold; color: #333;")
         self.icerik_alani.addWidget(ilk_sayfa) 
         
-        # Modüller
+        # Modüller (Sırasıyla İndeks 1'den 7'ye)
         self.cevirici_modulu = UnitConverterWidget()
-        self.icerik_alani.addWidget(self.cevirici_modulu) # İndeks 1
+        self.icerik_alani.addWidget(self.cevirici_modulu) 
         
         self.ucus_hesaplayici = FlightTimeCalculatorWidget()
-        self.icerik_alani.addWidget(self.ucus_hesaplayici) # İndeks 2
+        self.icerik_alani.addWidget(self.ucus_hesaplayici)
         
         self.crc_hesaplayici = CRCCalculatorWidget()
-        self.icerik_alani.addWidget(self.crc_hesaplayici) # İndeks 3
+        self.icerik_alani.addWidget(self.crc_hesaplayici)
         
         self.ag_testi = NetworkTestWidget()
-        self.icerik_alani.addWidget(self.ag_testi) # İndeks 4
+        self.icerik_alani.addWidget(self.ag_testi)
         
         self.koordinat_cevirici = CoordinateConverterWidget()
-        self.icerik_alani.addWidget(self.koordinat_cevirici) # İndeks 5
+        self.icerik_alani.addWidget(self.koordinat_cevirici)
         
         self.seri_terminal = SerialTerminalWidget()
-        self.icerik_alani.addWidget(self.seri_terminal) # İndeks 6
+        self.icerik_alani.addWidget(self.seri_terminal)
+        
+        self.hex_goruntuleyici = HexViewerWidget()
+        self.icerik_alani.addWidget(self.hex_goruntuleyici) 
         
         ana_duzen.addWidget(self.sol_menu)
         ana_duzen.addWidget(self.icerik_alani)
@@ -83,6 +87,8 @@ class AETDashboard(QMainWindow):
             self.icerik_alani.setCurrentIndex(5)
         elif secilen_isim == "Serial Terminal":
             self.icerik_alani.setCurrentIndex(6)
+        elif secilen_isim == "Hex Viewer":
+            self.icerik_alani.setCurrentIndex(7)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
