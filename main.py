@@ -13,6 +13,7 @@ from modules.serial_terminal import SerialTerminalWidget
 from modules.hex_viewer import HexViewerWidget
 from modules.can_log_viewer import CANLogViewerWidget
 from modules.ulog_analyzer import ULogAnalyzerWidget
+from modules.rtsp_test import RTSPTestWidget
 
 class AETDashboard(QMainWindow):
     def __init__(self):
@@ -41,6 +42,8 @@ class AETDashboard(QMainWindow):
         
         self.sol_menu = QListWidget()
         self.sol_menu.setFixedWidth(220)
+        
+        # Menü İsimleri
         self.sol_menu.addItems([
             "Dashboard", 
             "ULog Analyzer", 
@@ -64,7 +67,7 @@ class AETDashboard(QMainWindow):
         dash_baslik = QLabel("AIROBOS\nENGINEERING TOOLKIT")
         dash_baslik.setAlignment(Qt.AlignCenter)
         dash_baslik.setStyleSheet("font-size: 32px; font-weight: 900; color: #00c3ff; letter-spacing: 2px;")
-        dash_alt_baslik = QLabel("Sistem durumu: Aktif | Modüller yüklendi...")
+        dash_alt_baslik = QLabel("Sistem durumu: Aktif | Tüm modüller arayüze entegre edildi.")
         dash_alt_baslik.setAlignment(Qt.AlignCenter)
         dash_alt_baslik.setStyleSheet("font-size: 14px; color: #888; margin-bottom: 20px;")
         dash_layout.addStretch()
@@ -74,32 +77,16 @@ class AETDashboard(QMainWindow):
         self.icerik_alani.addWidget(dashboard_widget) 
         
         # Modüller
-        self.cevirici_modulu = UnitConverterWidget()
-        self.icerik_alani.addWidget(self.cevirici_modulu) # 1
-        
-        self.ucus_hesaplayici = FlightTimeCalculatorWidget()
-        self.icerik_alani.addWidget(self.ucus_hesaplayici) # 2
-        
-        self.crc_hesaplayici = CRCCalculatorWidget()
-        self.icerik_alani.addWidget(self.crc_hesaplayici) # 3
-        
-        self.ag_testi = NetworkTestWidget()
-        self.icerik_alani.addWidget(self.ag_testi) # 4
-        
-        self.koordinat_cevirici = CoordinateConverterWidget()
-        self.icerik_alani.addWidget(self.koordinat_cevirici) # 5
-        
-        self.seri_terminal = SerialTerminalWidget()
-        self.icerik_alani.addWidget(self.seri_terminal) # 6
-        
-        self.hex_goruntuleyici = HexViewerWidget()
-        self.icerik_alani.addWidget(self.hex_goruntuleyici) # 7
-        
-        self.can_log_goruntuleyici = CANLogViewerWidget()
-        self.icerik_alani.addWidget(self.can_log_goruntuleyici) # 8
-        
-        self.ulog_analiz = ULogAnalyzerWidget()
-        self.icerik_alani.addWidget(self.ulog_analiz) # 9
+        self.icerik_alani.addWidget(ULogAnalyzerWidget())         # 1
+        self.icerik_alani.addWidget(CANLogViewerWidget())         # 2
+        self.icerik_alani.addWidget(SerialTerminalWidget())       # 3
+        self.icerik_alani.addWidget(NetworkTestWidget())          # 4
+        self.icerik_alani.addWidget(RTSPTestWidget())             # 5
+        self.icerik_alani.addWidget(CRCCalculatorWidget())        # 6
+        self.icerik_alani.addWidget(CoordinateConverterWidget())  # 7
+        self.icerik_alani.addWidget(HexViewerWidget())            # 8
+        self.icerik_alani.addWidget(UnitConverterWidget())        # 9
+        self.icerik_alani.addWidget(FlightTimeCalculatorWidget()) # 10
         
         ana_duzen.addWidget(self.sol_menu)
         ana_duzen.addWidget(self.icerik_alani)
@@ -108,27 +95,23 @@ class AETDashboard(QMainWindow):
         self.sol_menu.setCurrentRow(0)
 
     def sayfa_degistir(self, item):
-        secilen_isim = item.text()
-        if secilen_isim == "Dashboard":
-            self.icerik_alani.setCurrentIndex(0)
-        elif secilen_isim == "Unit Converter":
-            self.icerik_alani.setCurrentIndex(1)
-        elif secilen_isim == "Flight Time Calculator":
-            self.icerik_alani.setCurrentIndex(2)
-        elif secilen_isim == "CRC Calculator":
-            self.icerik_alani.setCurrentIndex(3)
-        elif secilen_isim == "Network Test":
-            self.icerik_alani.setCurrentIndex(4)
-        elif secilen_isim == "Coordinate Converter":
-            self.icerik_alani.setCurrentIndex(5)
-        elif secilen_isim == "Serial Terminal":
-            self.icerik_alani.setCurrentIndex(6)
-        elif secilen_isim == "Hex Viewer":
-            self.icerik_alani.setCurrentIndex(7)
-        elif secilen_isim == "CAN Log Viewer":
-            self.icerik_alani.setCurrentIndex(8)
-        elif secilen_isim == "ULog Analyzer":
-            self.icerik_alani.setCurrentIndex(9)
+        # Menüdeki isimleri tam olarak indeksleriyle eşleştiriyoruz
+        sayfalar = {
+            "Dashboard": 0,
+            "ULog Analyzer": 1,
+            "CAN Log Viewer": 2,
+            "Serial Terminal": 3,
+            "Network Test": 4,
+            "RTSP Test": 5,
+            "CRC Calculator": 6,
+            "Coordinate Converter": 7,
+            "Hex Viewer": 8,
+            "Unit Converter": 9,
+            "Flight Time Calculator": 10
+        }
+        secilen = item.text()
+        if secilen in sayfalar:
+            self.icerik_alani.setCurrentIndex(sayfalar[secilen])
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
