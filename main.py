@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget,
 from modules.unit_converter import UnitConverterWidget
 from modules.flight_time_calculator import FlightTimeCalculatorWidget
 from modules.crc_calculator import CRCCalculatorWidget
+from modules.network_test import NetworkTestWidget
 
 class AETDashboard(QMainWindow):
     def __init__(self):
@@ -52,6 +53,10 @@ class AETDashboard(QMainWindow):
         self.crc_hesaplayici = CRCCalculatorWidget()
         self.icerik_alani.addWidget(self.crc_hesaplayici)
         
+        # İndeks 4: Network Test
+        self.ag_testi = NetworkTestWidget()
+        self.icerik_alani.addWidget(self.ag_testi)
+        
         ana_duzen.addWidget(self.sol_menu)
         ana_duzen.addWidget(self.icerik_alani)
 
@@ -67,6 +72,8 @@ class AETDashboard(QMainWindow):
             self.icerik_alani.setCurrentIndex(2)
         elif secilen_isim == "CRC Calculator":
             self.icerik_alani.setCurrentIndex(3)
+        elif secilen_isim == "Network Test":
+            self.icerik_alani.setCurrentIndex(4)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
