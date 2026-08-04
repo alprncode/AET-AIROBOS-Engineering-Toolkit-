@@ -6,6 +6,7 @@ from modules.unit_converter import UnitConverterWidget
 from modules.flight_time_calculator import FlightTimeCalculatorWidget
 from modules.crc_calculator import CRCCalculatorWidget
 from modules.network_test import NetworkTestWidget
+from modules.coordinate_converter import CoordinateConverterWidget
 
 class AETDashboard(QMainWindow):
     def __init__(self):
@@ -36,26 +37,26 @@ class AETDashboard(QMainWindow):
         
         self.icerik_alani = QStackedWidget()
         
-        # İndeks 0: Hoş Geldiniz Ekranı
+        # İndeks 0
         ilk_sayfa = QLabel("AIROBOS AET Sistemine Hoş Geldiniz.\nLütfen soldaki menüden bir araç seçin.")
         ilk_sayfa.setStyleSheet("font-size: 16px; font-weight: bold; color: #333;")
         self.icerik_alani.addWidget(ilk_sayfa) 
         
-        # İndeks 1: Unit Converter
+        # Modüller
         self.cevirici_modulu = UnitConverterWidget()
-        self.icerik_alani.addWidget(self.cevirici_modulu) 
+        self.icerik_alani.addWidget(self.cevirici_modulu) # İndeks 1
         
-        # İndeks 2: Flight Time Calculator
         self.ucus_hesaplayici = FlightTimeCalculatorWidget()
-        self.icerik_alani.addWidget(self.ucus_hesaplayici)
+        self.icerik_alani.addWidget(self.ucus_hesaplayici) # İndeks 2
         
-        # İndeks 3: CRC Calculator
         self.crc_hesaplayici = CRCCalculatorWidget()
-        self.icerik_alani.addWidget(self.crc_hesaplayici)
+        self.icerik_alani.addWidget(self.crc_hesaplayici) # İndeks 3
         
-        # İndeks 4: Network Test
         self.ag_testi = NetworkTestWidget()
-        self.icerik_alani.addWidget(self.ag_testi)
+        self.icerik_alani.addWidget(self.ag_testi) # İndeks 4
+        
+        self.koordinat_cevirici = CoordinateConverterWidget()
+        self.icerik_alani.addWidget(self.koordinat_cevirici) # İndeks 5
         
         ana_duzen.addWidget(self.sol_menu)
         ana_duzen.addWidget(self.icerik_alani)
@@ -74,6 +75,8 @@ class AETDashboard(QMainWindow):
             self.icerik_alani.setCurrentIndex(3)
         elif secilen_isim == "Network Test":
             self.icerik_alani.setCurrentIndex(4)
+        elif secilen_isim == "Coordinate Converter":
+            self.icerik_alani.setCurrentIndex(5)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
