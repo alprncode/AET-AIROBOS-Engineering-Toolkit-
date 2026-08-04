@@ -12,6 +12,7 @@ from modules.coordinate_converter import CoordinateConverterWidget
 from modules.serial_terminal import SerialTerminalWidget
 from modules.hex_viewer import HexViewerWidget
 from modules.can_log_viewer import CANLogViewerWidget
+from modules.ulog_analyzer import ULogAnalyzerWidget
 
 class AETDashboard(QMainWindow):
     def __init__(self):
@@ -74,28 +75,31 @@ class AETDashboard(QMainWindow):
         
         # Modüller
         self.cevirici_modulu = UnitConverterWidget()
-        self.icerik_alani.addWidget(self.cevirici_modulu) # İndeks 1
+        self.icerik_alani.addWidget(self.cevirici_modulu) # 1
         
         self.ucus_hesaplayici = FlightTimeCalculatorWidget()
-        self.icerik_alani.addWidget(self.ucus_hesaplayici) # İndeks 2
+        self.icerik_alani.addWidget(self.ucus_hesaplayici) # 2
         
         self.crc_hesaplayici = CRCCalculatorWidget()
-        self.icerik_alani.addWidget(self.crc_hesaplayici) # İndeks 3
+        self.icerik_alani.addWidget(self.crc_hesaplayici) # 3
         
         self.ag_testi = NetworkTestWidget()
-        self.icerik_alani.addWidget(self.ag_testi) # İndeks 4
+        self.icerik_alani.addWidget(self.ag_testi) # 4
         
         self.koordinat_cevirici = CoordinateConverterWidget()
-        self.icerik_alani.addWidget(self.koordinat_cevirici) # İndeks 5
+        self.icerik_alani.addWidget(self.koordinat_cevirici) # 5
         
         self.seri_terminal = SerialTerminalWidget()
-        self.icerik_alani.addWidget(self.seri_terminal) # İndeks 6
+        self.icerik_alani.addWidget(self.seri_terminal) # 6
         
         self.hex_goruntuleyici = HexViewerWidget()
-        self.icerik_alani.addWidget(self.hex_goruntuleyici) # İndeks 7
+        self.icerik_alani.addWidget(self.hex_goruntuleyici) # 7
         
         self.can_log_goruntuleyici = CANLogViewerWidget()
-        self.icerik_alani.addWidget(self.can_log_goruntuleyici) # İndeks 8
+        self.icerik_alani.addWidget(self.can_log_goruntuleyici) # 8
+        
+        self.ulog_analiz = ULogAnalyzerWidget()
+        self.icerik_alani.addWidget(self.ulog_analiz) # 9
         
         ana_duzen.addWidget(self.sol_menu)
         ana_duzen.addWidget(self.icerik_alani)
@@ -123,6 +127,8 @@ class AETDashboard(QMainWindow):
             self.icerik_alani.setCurrentIndex(7)
         elif secilen_isim == "CAN Log Viewer":
             self.icerik_alani.setCurrentIndex(8)
+        elif secilen_isim == "ULog Analyzer":
+            self.icerik_alani.setCurrentIndex(9)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
