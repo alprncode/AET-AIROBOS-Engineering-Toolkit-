@@ -7,6 +7,7 @@ from modules.flight_time_calculator import FlightTimeCalculatorWidget
 from modules.crc_calculator import CRCCalculatorWidget
 from modules.network_test import NetworkTestWidget
 from modules.coordinate_converter import CoordinateConverterWidget
+from modules.serial_terminal import SerialTerminalWidget
 
 class AETDashboard(QMainWindow):
     def __init__(self):
@@ -58,6 +59,9 @@ class AETDashboard(QMainWindow):
         self.koordinat_cevirici = CoordinateConverterWidget()
         self.icerik_alani.addWidget(self.koordinat_cevirici) # İndeks 5
         
+        self.seri_terminal = SerialTerminalWidget()
+        self.icerik_alani.addWidget(self.seri_terminal) # İndeks 6
+        
         ana_duzen.addWidget(self.sol_menu)
         ana_duzen.addWidget(self.icerik_alani)
 
@@ -77,6 +81,8 @@ class AETDashboard(QMainWindow):
             self.icerik_alani.setCurrentIndex(4)
         elif secilen_isim == "Coordinate Converter":
             self.icerik_alani.setCurrentIndex(5)
+        elif secilen_isim == "Serial Terminal":
+            self.icerik_alani.setCurrentIndex(6)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
