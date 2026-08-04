@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget,
 
 from modules.unit_converter import UnitConverterWidget
 from modules.flight_time_calculator import FlightTimeCalculatorWidget
+from modules.crc_calculator import CRCCalculatorWidget
 
 class AETDashboard(QMainWindow):
     def __init__(self):
@@ -47,6 +48,10 @@ class AETDashboard(QMainWindow):
         self.ucus_hesaplayici = FlightTimeCalculatorWidget()
         self.icerik_alani.addWidget(self.ucus_hesaplayici)
         
+        # İndeks 3: CRC Calculator
+        self.crc_hesaplayici = CRCCalculatorWidget()
+        self.icerik_alani.addWidget(self.crc_hesaplayici)
+        
         ana_duzen.addWidget(self.sol_menu)
         ana_duzen.addWidget(self.icerik_alani)
 
@@ -60,6 +65,8 @@ class AETDashboard(QMainWindow):
             self.icerik_alani.setCurrentIndex(1)
         elif secilen_isim == "Flight Time Calculator":
             self.icerik_alani.setCurrentIndex(2)
+        elif secilen_isim == "CRC Calculator":
+            self.icerik_alani.setCurrentIndex(3)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
