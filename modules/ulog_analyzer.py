@@ -1,4 +1,5 @@
 import pyqtgraph as pg
+import numpy as np
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                                QPushButton, QLabel, QFileDialog, QMessageBox)
 from pyulog import ULog
@@ -9,7 +10,7 @@ class ULogAnalyzerWidget(QWidget):
         
         ana_duzen = QVBoxLayout(self)
         
-        baslik = QLabel("ULog Analyzer (İnteraktif İrtifa Grafiği)")
+        baslik = QLabel("ULog Analyzer (Bağımsız ve Temiz Grafikler)")
         baslik.setStyleSheet("font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #00c3ff;")
         ana_duzen.addWidget(baslik)
         
@@ -20,18 +21,35 @@ class ULogAnalyzerWidget(QWidget):
         kontrol_duzeni.addWidget(self.yukle_butonu)
         ana_duzen.addLayout(kontrol_duzeni)
         
-        # 2. PyQtGraph İnteraktif Grafik Alanı (Dark Mode Entegrasyonu)
-        pg.setConfigOption('background', '#181818') # Arayüzle uyumlu arkaplan
-        pg.setConfigOption('foreground', '#e0e0e0') # Eksen ve metin renkleri
+        # 2. PyQtGraph 
+        pg.setConfigOption('background', '#181818')
+        pg.setConfigOption('foreground', '#e0e0e0')
         
-        self.grafik_alani = pg.PlotWidget()
-        self.grafik_alani.setTitle("Altitude Estimate (Fare Tekerleği ile Yakınlaştır / Basılı Tutup Sürükle)", color="#00c3ff", size="12pt")
-        self.grafik_alani.setLabel('left', 'İrtifa', units='Metre')
-        self.grafik_alani.setLabel('bottom', 'Uçuş Süresi', units='Saniye')
-        self.grafik_alani.showGrid(x=True, y=True, alpha=0.3)
-        self.grafik_alani.addLegend() # Çizgi renklerinin ne anlama geldiğini gösteren kutu
-        
+        self.grafik_alani = pg.GraphicsLayoutWidget()
         ana_duzen.addWidget(self.grafik_alani)
+        
+        # A) İrtifa Grafiği - Yazılar HTML ile başlığa taşındı
+        self.plt_alt = self.grafik_alani.addPlot(title="Altitude Estimate | Fused Altitude | Barometer")
+        self.plt_alt.setLabel('left', 'İrtifa', units='m')
+        self.plt_alt.showGrid(x=True, y=True, alpha=0.3)
+        # addLegend() kaldırıldı!
+        
+        self.grafik_alani.nextRow()
+        
+        # B) Roll (Yuvarlanma) Grafiği
+        self.plt_roll = self.grafik_alani.addPlot(title="Roll Angle | Roll Estimated")
+        self.plt_roll.setLabel('left', 'Roll', units='deg')
+        self.plt_roll.showGrid(x=True, y=True, alpha=0.3)
+        
+        self.grafik_alani.nextRow()
+        
+        # C) Pitch (Yunuslama) Grafiği
+        self.plt_pitch = self.grafik_alani.addPlot(title="Pitch Angle | Pitch Estimated")
+        self.plt_pitch.setLabel('left', 'Pitch', units='deg')
+        self.plt_pitch.setLabel('bottom', 'Uçuş Süresi', units='s')
+        self.plt_pitch.showGrid(x=True, y=True, alpha=0.3)
+        
+        # DİKKAT: setXLink() komutları silindi. Artık tüm grafikler bağımsız hareket edecek!
         
         # Buton Bağlantısı
         self.yukle_butonu.clicked.connect(self.gercek_dosya_sec_ve_ciz)
@@ -59,39 +77,53 @@ class ULogAnalyzerWidget(QWidget):
                 self.yukle_butonu.setEnabled(True)
 
     def grafik_ciz(self, dosya_yolu):
-        # Gerçek ulog dosyasını okuyoruz
         ulog = ULog(dosya_yolu)
         
-        # Eski çizimleri tamamen temizle
-        self.grafik_alani.clear()
+        # Eski çizimleri temizle
+        self.plt_alt.clear()
+        self.plt_roll.clear()
+        self.plt_pitch.clear()
         
-        veri_cizildi_mi = False
-
-        # 1. Veri: Fused Altitude (Uçuş kontrolcüsünün hesapladığı net irtifa)
+        # 1. İRTİFA VERİSİ
         try:
             local_pos = ulog.get_dataset('vehicle_local_position')
             t_local = (local_pos.data['timestamp'] - ulog.start_timestamp) / 1e6
             z_data = -local_pos.data['z']
-            
-            # Mavi renkte, belirgin kalınlıkta çizdir
-            kalem_fused = pg.mkPen(color='#00c3ff', width=2)
-            self.grafik_alani.plot(t_local, z_data, name='Fused Altitude Estimation', pen=kalem_fused)
-            veri_cizildi_mi = True
-        except Exception:
+            self.plt_alt.plot(t_local, z_data, name='Fused Altitude', pen=pg.mkPen(color='#00c3ff', width=1.5))
+        except:
             pass
-
-        # 2. Veri: Barometre İrtifası (Sadece barometre sensöründen gelen ham veri)
+            
         try:
             baro_data = ulog.get_dataset('sensor_baro')
             t_baro = (baro_data.data['timestamp'] - ulog.start_timestamp) / 1e6
             baro_alt = baro_data.data['altitude']
-            
-            # Pembe renkte çizdir
-            kalem_baro = pg.mkPen(color='#ff00ff', width=2)
-            self.grafik_alani.plot(t_baro, baro_alt, name='Barometer Altitude', pen=kalem_baro)
-            veri_cizildi_mi = True
-        except Exception:
+            self.plt_alt.plot(t_baro, baro_alt, name='Barometer', pen=pg.mkPen(color='#ff00ff', width=1.5))
+        except:
             pass
 
-        if not veri_cizildi_mi:
-            QMessageBox.warning(self, "Veri Bulunamadı", "Bu ULog dosyasında İrtifa (Altitude) verisi bulunamadı.")
+        # 2. TUTUM (ATTITUDE) VERİSİ VE MATEMATİKSEL DÖNÜŞÜMLER
+        try:
+            attitude = ulog.get_dataset('vehicle_attitude')
+            t_att = (attitude.data['timestamp'] - ulog.start_timestamp) / 1e6
+            
+            q0 = attitude.data['q[0]']
+            q1 = attitude.data['q[1]']
+            q2 = attitude.data['q[2]']
+            q3 = attitude.data['q[3]']
+            
+            sinr_cosp = 2.0 * (q0 * q1 + q2 * q3)
+            cosr_cosp = 1.0 - 2.0 * (q1 * q1 + q2 * q2)
+            roll_rad = np.arctan2(sinr_cosp, cosr_cosp)
+            
+            sinp = 2.0 * (q0 * q2 - q3 * q1)
+            sinp = np.clip(sinp, -1.0, 1.0) 
+            pitch_rad = np.arcsin(sinp)
+            
+            roll_deg = np.degrees(roll_rad)
+            pitch_deg = np.degrees(pitch_rad)
+            
+            self.plt_roll.plot(t_att, roll_deg, name='Roll Estimated', pen=pg.mkPen(color='#d84b20', width=1.5))
+            self.plt_pitch.plot(t_att, pitch_deg, name='Pitch Estimated', pen=pg.mkPen(color='#2ca02c', width=1.5))
+            
+        except Exception as e:
+            print("Tutum verisi bulunamadı veya hata:", e)
