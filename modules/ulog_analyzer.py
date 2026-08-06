@@ -61,6 +61,14 @@ class ULogAnalyzerWidget(QWidget):
     def tekerlek_iptal(self, olay):
         olay.ignore() 
 
+    def optimizasyon_uygula(self, plt):
+        """Grafiklerin kasmasını önleyen PyQtGraph performans ayarları"""
+        plt.showGrid(x=True, y=True, alpha=0.3)
+        # Sadece ekranda görünen kısmı hesapla
+        plt.setClipToView(True)
+        # Uzaktan bakarken veriyi seyrelt (tepe noktalarını koruyarak)
+        plt.setDownsampling(auto=True, mode='peak')
+
     def bilgi_paneli_olustur(self, baslik, aciklama, renk="#00c3ff"):
         kutu = QFrame()
         kutu.setStyleSheet(f"QFrame {{ background-color: #1a1a2e; border-left: 5px solid {renk}; border-radius: 5px; }}")
@@ -89,7 +97,7 @@ class ULogAnalyzerWidget(QWidget):
         gl_irtifa.setMinimumHeight(250)
         gl_irtifa.wheelEvent = self.tekerlek_iptal 
         self.plt_alt = gl_irtifa.addPlot(title="Altitude Estimate | <span style='color: #00c3ff;'>Fused Altitude</span>")
-        self.plt_alt.showGrid(x=True, y=True, alpha=0.3)
+        self.optimizasyon_uygula(self.plt_alt)
         self.scroll_duzen.addWidget(gl_irtifa)
         
         # 2. TUTUM
@@ -105,10 +113,10 @@ class ULogAnalyzerWidget(QWidget):
         gl_tutum.wheelEvent = self.tekerlek_iptal 
         
         self.plt_roll = gl_tutum.addPlot(title="Roll Angle | <span style='color: #d84b20;'>Roll Estimated</span>")
-        self.plt_roll.showGrid(x=True, y=True, alpha=0.3)
+        self.optimizasyon_uygula(self.plt_roll)
         gl_tutum.nextRow()
         self.plt_pitch = gl_tutum.addPlot(title="Pitch Angle | <span style='color: #2ca02c;'>Pitch Estimated</span>")
-        self.plt_pitch.showGrid(x=True, y=True, alpha=0.3)
+        self.optimizasyon_uygula(self.plt_pitch)
         self.scroll_duzen.addWidget(gl_tutum)
 
         # 3. GÜÇ VE BATARYA
@@ -123,10 +131,10 @@ class ULogAnalyzerWidget(QWidget):
         gl_guc.setMinimumHeight(250)
         gl_guc.wheelEvent = self.tekerlek_iptal 
         self.plt_guc = gl_guc.addPlot(title="Power | <span style='color: #d84b20;'>Voltage [V]</span> | <span style='color: #2ca02c;'>Current [A]</span>")
-        self.plt_guc.showGrid(x=True, y=True, alpha=0.3)
+        self.optimizasyon_uygula(self.plt_guc)
         self.scroll_duzen.addWidget(gl_guc)
         
-        # 4. MOTOR ÇIKIŞLARI (YENİ EKLENEN KISIM)
+        # 4. MOTOR ÇIKIŞLARI
         motor_bilgi = self.bilgi_paneli_olustur(
             "⚙️ Motor Çıkışları (Actuator Outputs)", 
             "Açıklama: Uçuş kontrolcüsünün (ESC'ler üzerinden) motorlara gönderdiği anlık güç sinyalleridir (genellikle 0 ile 1 arasında veya PWM). Sürekli ayrışan veya çok yüksek çalışan bir motor çizgisi; ağırlık merkezindeki (CG) kaymayı, pervane hasarını veya iskelet titreşimlerini işaret eder.", 
@@ -138,7 +146,7 @@ class ULogAnalyzerWidget(QWidget):
         gl_motor.setMinimumHeight(250)
         gl_motor.wheelEvent = self.tekerlek_iptal 
         self.plt_motor = gl_motor.addPlot(title="Motor Outputs | <span style='color: #d84b20;'>Motor 1</span> | <span style='color: #2ca02c;'>Motor 2</span> | <span style='color: #00c3ff;'>Motor 3</span> | <span style='color: #f1c40f;'>Motor 4</span>")
-        self.plt_motor.showGrid(x=True, y=True, alpha=0.3)
+        self.optimizasyon_uygula(self.plt_motor)
         self.scroll_duzen.addWidget(gl_motor)
 
         self.scroll_duzen.addStretch()
@@ -192,7 +200,6 @@ class ULogAnalyzerWidget(QWidget):
 
         # --- 4. MOTOR ÇIKIŞLARI ---
         try:
-            # Modern PX4 versiyonlarında actuator_motors olarak gelir
             motors = ulog.get_dataset('actuator_motors')
             t_mot = (motors.data['timestamp'] - ulog.start_timestamp) / 1e6
             m1 = motors.data['control[0]']
@@ -206,7 +213,6 @@ class ULogAnalyzerWidget(QWidget):
             self.plt_motor.plot(t_mot, m4, pen=pg.mkPen(color='#f1c40f', width=1.5))
         except:
             try:
-                # Eski tip otopilot logları veya alternatif çıkışlar için
                 outputs = ulog.get_dataset('actuator_outputs')
                 t_out = (outputs.data['timestamp'] - ulog.start_timestamp) / 1e6
                 o1 = outputs.data['output[0]']
