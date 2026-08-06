@@ -114,7 +114,7 @@ class ULogAnalyzerWidget(QWidget):
         # 3. GÜÇ VE BATARYA
         guc_bilgi = self.bilgi_paneli_olustur(
             "🔋 Güç ve Batarya Tüketimi (Power)", 
-            "Açıklama: Aracın güç modülü üzerinden okunan anlık batarya voltajı (V) ve çekilen akım (A) değerleridir. Ani akım sıçramaları motorların zorlandığı (örneğin sert manevralar) anları, voltaj düşümleri ise bataryanın deşarj eğilimini gösterir.", 
+            "Açıklama: Aracın güç modülü üzerinden okunan anlık batarya voltajı (V) ve çekilen akım (A) değerleridir. Ani akım sıçramaları motorların zorlandığı anları, voltaj düşümleri ise bataryanın deşarj eğilimini gösterir.", 
             renk="#f1c40f"
         )
         self.scroll_duzen.addWidget(guc_bilgi)
@@ -126,6 +126,21 @@ class ULogAnalyzerWidget(QWidget):
         self.plt_guc.showGrid(x=True, y=True, alpha=0.3)
         self.scroll_duzen.addWidget(gl_guc)
         
+        # 4. MOTOR ÇIKIŞLARI (YENİ EKLENEN KISIM)
+        motor_bilgi = self.bilgi_paneli_olustur(
+            "⚙️ Motor Çıkışları (Actuator Outputs)", 
+            "Açıklama: Uçuş kontrolcüsünün (ESC'ler üzerinden) motorlara gönderdiği anlık güç sinyalleridir (genellikle 0 ile 1 arasında veya PWM). Sürekli ayrışan veya çok yüksek çalışan bir motor çizgisi; ağırlık merkezindeki (CG) kaymayı, pervane hasarını veya iskelet titreşimlerini işaret eder.", 
+            renk="#9b59b6"
+        )
+        self.scroll_duzen.addWidget(motor_bilgi)
+        
+        gl_motor = pg.GraphicsLayoutWidget()
+        gl_motor.setMinimumHeight(250)
+        gl_motor.wheelEvent = self.tekerlek_iptal 
+        self.plt_motor = gl_motor.addPlot(title="Motor Outputs | <span style='color: #d84b20;'>Motor 1</span> | <span style='color: #2ca02c;'>Motor 2</span> | <span style='color: #00c3ff;'>Motor 3</span> | <span style='color: #f1c40f;'>Motor 4</span>")
+        self.plt_motor.showGrid(x=True, y=True, alpha=0.3)
+        self.scroll_duzen.addWidget(gl_motor)
+
         self.scroll_duzen.addStretch()
 
     def gercek_dosya_sec_ve_ciz(self):
@@ -148,6 +163,7 @@ class ULogAnalyzerWidget(QWidget):
         self.plt_roll.clear()
         self.plt_pitch.clear()
         self.plt_guc.clear()
+        self.plt_motor.clear()
 
         # --- 1. İRTİFA ---
         try:
@@ -170,9 +186,37 @@ class ULogAnalyzerWidget(QWidget):
             t_bat = (battery.data['timestamp'] - ulog.start_timestamp) / 1e6
             voltage = battery.data['voltage_v']
             current = battery.data['current_a']
-            
-            # Voltaj ve Akımı aynı grafikte, farklı renklerle çizdiriyoruz
             self.plt_guc.plot(t_bat, voltage, pen=pg.mkPen(color='#d84b20', width=1.5))
             self.plt_guc.plot(t_bat, current, pen=pg.mkPen(color='#2ca02c', width=1.5))
-        except Exception as e:
-            print("Batarya verisi çizilemedi:", e)
+        except: pass
+
+        # --- 4. MOTOR ÇIKIŞLARI ---
+        try:
+            # Modern PX4 versiyonlarında actuator_motors olarak gelir
+            motors = ulog.get_dataset('actuator_motors')
+            t_mot = (motors.data['timestamp'] - ulog.start_timestamp) / 1e6
+            m1 = motors.data['control[0]']
+            m2 = motors.data['control[1]']
+            m3 = motors.data['control[2]']
+            m4 = motors.data['control[3]']
+            
+            self.plt_motor.plot(t_mot, m1, pen=pg.mkPen(color='#d84b20', width=1.5))
+            self.plt_motor.plot(t_mot, m2, pen=pg.mkPen(color='#2ca02c', width=1.5))
+            self.plt_motor.plot(t_mot, m3, pen=pg.mkPen(color='#00c3ff', width=1.5))
+            self.plt_motor.plot(t_mot, m4, pen=pg.mkPen(color='#f1c40f', width=1.5))
+        except:
+            try:
+                # Eski tip otopilot logları veya alternatif çıkışlar için
+                outputs = ulog.get_dataset('actuator_outputs')
+                t_out = (outputs.data['timestamp'] - ulog.start_timestamp) / 1e6
+                o1 = outputs.data['output[0]']
+                o2 = outputs.data['output[1]']
+                o3 = outputs.data['output[2]']
+                o4 = outputs.data['output[3]']
+                
+                self.plt_motor.plot(t_out, o1, pen=pg.mkPen(color='#d84b20', width=1.5))
+                self.plt_motor.plot(t_out, o2, pen=pg.mkPen(color='#2ca02c', width=1.5))
+                self.plt_motor.plot(t_out, o3, pen=pg.mkPen(color='#00c3ff', width=1.5))
+                self.plt_motor.plot(t_out, o4, pen=pg.mkPen(color='#f1c40f', width=1.5))
+            except Exception as e:
+                print("Motor verisi çizilemedi:", e)
