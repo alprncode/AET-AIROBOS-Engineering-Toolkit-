@@ -11,57 +11,66 @@ class ULogAnalyzerWidget(QWidget):
         super().__init__()
         
         ana_duzen = QVBoxLayout(self)
+        ana_duzen.setSpacing(15)
         
-        baslik = QLabel("ULog Dashboard (Kapsamlı Uçuş Analizi)")
-        baslik.setStyleSheet("font-size: 20px; font-weight: bold; margin-bottom: 5px; color: #00c3ff;")
-        ana_duzen.addWidget(baslik)
+        # --- BAŞLIK ALANI ---
+        baslik_kutusu = QFrame()
+        baslik_kutusu.setStyleSheet("QFrame { background-color: #1a1a2e; border: 1px solid #16213e; border-radius: 8px; border-bottom: 3px solid #0f3460; }")
+        baslik_duzeni = QHBoxLayout(baslik_kutusu)
         
-        # 1. Kontrol Paneli
+        baslik = QLabel("🚀 AET ULog Dashboard")
+        baslik.setStyleSheet("font-size: 22px; font-weight: 900; color: #e94560; border: none; background: transparent;")
+        baslik_duzeni.addWidget(baslik)
+        
+        alt_baslik = QLabel("Gelişmiş Otonom Sistem Uçuş Analizi")
+        alt_baslik.setStyleSheet("font-size: 14px; color: #a2a8d3; border: none; background: transparent;")
+        baslik_duzeni.addWidget(alt_baslik, alignment=Qt.AlignRight | Qt.AlignVCenter)
+        
+        ana_duzen.addWidget(baslik_kutusu)
+        
+        # --- BUTON ---
         kontrol_duzeni = QHBoxLayout()
-        self.yukle_butonu = QPushButton("Gerçek ULog Dosyası Seç (.ulg, .ulog)")
-        self.yukle_butonu.setStyleSheet("padding: 10px; font-weight: bold; background-color: #d84b20; color: white; border-radius: 4px;")
+        self.yukle_butonu = QPushButton("📁 Bir Ulog Dosyası Seç (.ulg .ulog)")
+        self.yukle_butonu.setStyleSheet("""
+            QPushButton { font-size: 15px; font-weight: bold; color: white; background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #e94560, stop:1 #0f3460); border-radius: 6px; padding: 12px; }
+            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ff5c77, stop:1 #1a4b8c); border: 1px solid #00c3ff; }
+            QPushButton:pressed { background: #0f3460; }
+        """)
         kontrol_duzeni.addWidget(self.yukle_butonu)
         ana_duzen.addLayout(kontrol_duzeni)
         
-        # 2. KAYDIRILABİLİR ALAN (SCROLL AREA) İNŞASI
+        # --- SCROLL ALANI ---
         self.scroll_alani = QScrollArea()
         self.scroll_alani.setWidgetResizable(True)
-        self.scroll_alani.setStyleSheet("QScrollArea { border: none; background-color: #121212; }")
+        self.scroll_alani.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
         
-        # Scroll alanının içindeki ana taşıyıcı widget
         self.scroll_icerik = QWidget()
         self.scroll_duzen = QVBoxLayout(self.scroll_icerik)
-        self.scroll_duzen.setSpacing(20) # Grafikler arası boşluk
-        self.scroll_duzen.setContentsMargins(0, 0, 15, 0)
+        self.scroll_duzen.setSpacing(25)
+        self.scroll_duzen.setContentsMargins(0, 10, 15, 10)
         
         self.scroll_alani.setWidget(self.scroll_icerik)
         ana_duzen.addWidget(self.scroll_alani)
         
-        # Pyqtgraph ayarları
-        pg.setConfigOption('background', '#181818')
+        pg.setConfigOption('background', '#121212')
         pg.setConfigOption('foreground', '#e0e0e0')
         
-        # Grafikleri ve Açıklamaları Tutacak Sözlük
-        self.grafikler = {}
-        
-        # Başlangıçta arayüzü hazırla (Boş grafikler)
         self.arayuzu_olustur()
-        
-        # Buton Bağlantısı
         self.yukle_butonu.clicked.connect(self.gercek_dosya_sec_ve_ciz)
 
-    def bilgi_paneli_olustur(self, baslik, aciklama):
-        """Grafiklerin üstüne eklenecek şık açıklama panelleri üretir"""
+    def tekerlek_iptal(self, olay):
+        olay.ignore() 
+
+    def bilgi_paneli_olustur(self, baslik, aciklama, renk="#00c3ff"):
         kutu = QFrame()
-        kutu.setStyleSheet("background-color: #1e1e1e; border-left: 4px solid #00c3ff; border-radius: 3px; padding: 10px;")
+        kutu.setStyleSheet(f"QFrame {{ background-color: #1a1a2e; border-left: 5px solid {renk}; border-radius: 5px; }}")
         duzen = QVBoxLayout(kutu)
-        duzen.setContentsMargins(10, 5, 10, 5)
+        duzen.setContentsMargins(15, 10, 15, 10)
         
         lbl_baslik = QLabel(baslik)
-        lbl_baslik.setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff; border: none;")
-        
+        lbl_baslik.setStyleSheet("font-size: 15px; font-weight: bold; color: #ffffff; border: none; background: transparent;")
         lbl_aciklama = QLabel(aciklama)
-        lbl_aciklama.setStyleSheet("font-size: 12px; color: #aaaaaa; border: none;")
+        lbl_aciklama.setStyleSheet("font-size: 12px; color: #a2a8d3; border: none; background: transparent;")
         lbl_aciklama.setWordWrap(True)
         
         duzen.addWidget(lbl_baslik)
@@ -69,87 +78,101 @@ class ULogAnalyzerWidget(QWidget):
         return kutu
 
     def arayuzu_olustur(self):
-        # 1. BÖLÜM: İRTİFA
+        # 1. İRTİFA
         irtifa_bilgi = self.bilgi_paneli_olustur(
-            "İrtifa Tahmini (Altitude Estimate)", 
-            "Açıklama: Aracın deniz seviyesine (MSL) veya kalkış noktasına göre hesaplanan yüksekliğidir. Fused Altitude, barometre ve GPS'in filtrelenmiş net sonucudur. Barometre grafiğindeki ani oynamalar hava akımı kaynaklı olabilir."
+            "✈️ İrtifa Tahmini (Altitude Estimate)", 
+            "Açıklama: Aracın kalkış noktasına veya deniz seviyesine (MSL) göre hesaplanan dikey yüksekliğidir. Fused Altitude, otopilotun barometre ve GPS verilerini Kalman Filtresi (EKF2) ile birleştirerek oluşturduğu net irtifa değerini temsil eder."
         )
         self.scroll_duzen.addWidget(irtifa_bilgi)
         
         gl_irtifa = pg.GraphicsLayoutWidget()
-        gl_irtifa.setMinimumHeight(300) # Her grafiğe minimum boyut veriyoruz ki ezilmesinler
-        self.plt_alt = gl_irtifa.addPlot(title="Altitude Estimate | Fused Altitude | Barometer")
+        gl_irtifa.setMinimumHeight(250)
+        gl_irtifa.wheelEvent = self.tekerlek_iptal 
+        self.plt_alt = gl_irtifa.addPlot(title="Altitude Estimate | <span style='color: #00c3ff;'>Fused Altitude</span>")
         self.plt_alt.showGrid(x=True, y=True, alpha=0.3)
         self.scroll_duzen.addWidget(gl_irtifa)
         
-        # 2. BÖLÜM: TUTUM (ATTITUDE)
+        # 2. TUTUM
         tutum_bilgi = self.bilgi_paneli_olustur(
-            "Araç Tutumu (Roll & Pitch Angles)", 
-            "Açıklama: Otonom sistemin yatay eksendeki dengesini gösterir. Roll (sağa/sola yatma) ve Pitch (öne/arkaya eğilme) açılarının Setpoint (istenen) değerden sapması, PID ayarlarının veya rüzgar direncinin kalitesini gösterir."
+            "📐 Araç Tutumu (Roll & Pitch Angles)", 
+            "Açıklama: Otonom sistemin uçuş sırasındaki yatay eksen dengesini gösterir. Roll (sağ/sol yatış) ve Pitch (ön/arka yunuslama) açılarının davranışı, rüzgar direncinin etkisini ve PID kontrol algoritmasının kararlılığını (stability) ifade eder.", 
+            renk="#2ca02c"
         )
         self.scroll_duzen.addWidget(tutum_bilgi)
         
         gl_tutum = pg.GraphicsLayoutWidget()
-        gl_tutum.setMinimumHeight(400)
+        gl_tutum.setMinimumHeight(350)
+        gl_tutum.wheelEvent = self.tekerlek_iptal 
         
-        self.plt_roll = gl_tutum.addPlot(title="Roll Angle | Roll Estimated")
+        self.plt_roll = gl_tutum.addPlot(title="Roll Angle | <span style='color: #d84b20;'>Roll Estimated</span>")
         self.plt_roll.showGrid(x=True, y=True, alpha=0.3)
         gl_tutum.nextRow()
-        
-        self.plt_pitch = gl_tutum.addPlot(title="Pitch Angle | Pitch Estimated")
+        self.plt_pitch = gl_tutum.addPlot(title="Pitch Angle | <span style='color: #2ca02c;'>Pitch Estimated</span>")
         self.plt_pitch.showGrid(x=True, y=True, alpha=0.3)
         self.scroll_duzen.addWidget(gl_tutum)
+
+        # 3. GÜÇ VE BATARYA
+        guc_bilgi = self.bilgi_paneli_olustur(
+            "🔋 Güç ve Batarya Tüketimi (Power)", 
+            "Açıklama: Aracın güç modülü üzerinden okunan anlık batarya voltajı (V) ve çekilen akım (A) değerleridir. Ani akım sıçramaları motorların zorlandığı (örneğin sert manevralar) anları, voltaj düşümleri ise bataryanın deşarj eğilimini gösterir.", 
+            renk="#f1c40f"
+        )
+        self.scroll_duzen.addWidget(guc_bilgi)
         
-        # Boşluk doldurucu (Aşağıdaki alanı iter)
+        gl_guc = pg.GraphicsLayoutWidget()
+        gl_guc.setMinimumHeight(250)
+        gl_guc.wheelEvent = self.tekerlek_iptal 
+        self.plt_guc = gl_guc.addPlot(title="Power | <span style='color: #d84b20;'>Voltage [V]</span> | <span style='color: #2ca02c;'>Current [A]</span>")
+        self.plt_guc.showGrid(x=True, y=True, alpha=0.3)
+        self.scroll_duzen.addWidget(gl_guc)
+        
         self.scroll_duzen.addStretch()
 
     def gercek_dosya_sec_ve_ciz(self):
-        dosya_yolu, _ = QFileDialog.getOpenFileName(
-            self, "ULog Dosyasını Seçin", "", "ULog (*.ulog *.ulg);;Tüm Dosyalar (*.*)"
-        )
+        dosya_yolu, _ = QFileDialog.getOpenFileName(self, "Bir ULog Dosyası Seçin", "", "ULog (*.ulog *.ulg);;Tüm Dosyalar (*.*)")
         if dosya_yolu:
             try:
-                self.yukle_butonu.setText("Uçuş Verileri İşleniyor, Lütfen Bekleyin...")
+                self.yukle_butonu.setText("⏳ Uçuş Verileri İşleniyor...")
                 self.yukle_butonu.setEnabled(False)
                 self.grafik_ciz(dosya_yolu)
-                self.yukle_butonu.setText("Gerçek ULog Dosyası Seç (.ulg, .ulog)")
+                self.yukle_butonu.setText("📁 Bir Ulog Dosyası Seç (.ulg .ulog)")
                 self.yukle_butonu.setEnabled(True)
             except Exception as e:
                 QMessageBox.critical(self, "Hata", f"Dosya okunamadı:\n{str(e)}")
-                self.yukle_butonu.setText("Gerçek ULog Dosyası Seç (.ulg, .ulog)")
+                self.yukle_butonu.setText("📁 Bir Ulog Dosyası Seç (.ulg .ulog)")
                 self.yukle_butonu.setEnabled(True)
 
     def grafik_ciz(self, dosya_yolu):
         ulog = ULog(dosya_yolu)
-        
         self.plt_alt.clear()
         self.plt_roll.clear()
         self.plt_pitch.clear()
-        
-        # İRTİFA
+        self.plt_guc.clear()
+
+        # --- 1. İRTİFA ---
         try:
             local_pos = ulog.get_dataset('vehicle_local_position')
-            t_local = (local_pos.data['timestamp'] - ulog.start_timestamp) / 1e6
-            z_data = -local_pos.data['z']
-            self.plt_alt.plot(t_local, z_data, pen=pg.mkPen(color='#00c3ff', width=1.5))
-        except: pass
-            
-        try:
-            baro_data = ulog.get_dataset('sensor_baro')
-            t_baro = (baro_data.data['timestamp'] - ulog.start_timestamp) / 1e6
-            baro_alt = baro_data.data['altitude']
-            self.plt_alt.plot(t_baro, baro_alt, pen=pg.mkPen(color='#ff00ff', width=1.5))
+            self.plt_alt.plot((local_pos.data['timestamp'] - ulog.start_timestamp) / 1e6, -local_pos.data['z'], pen=pg.mkPen(color='#00c3ff', width=1.5))
         except: pass
 
-        # TUTUM
+        # --- 2. TUTUM ---
         try:
             attitude = ulog.get_dataset('vehicle_attitude')
             t_att = (attitude.data['timestamp'] - ulog.start_timestamp) / 1e6
             q0, q1, q2, q3 = attitude.data['q[0]'], attitude.data['q[1]'], attitude.data['q[2]'], attitude.data['q[3]']
-            
-            roll_rad = np.arctan2(2.0 * (q0 * q1 + q2 * q3), 1.0 - 2.0 * (q1 * q1 + q2 * q2))
-            pitch_rad = np.arcsin(np.clip(2.0 * (q0 * q2 - q3 * q1), -1.0, 1.0))
-            
-            self.plt_roll.plot(t_att, np.degrees(roll_rad), pen=pg.mkPen(color='#d84b20', width=1.5))
-            self.plt_pitch.plot(t_att, np.degrees(pitch_rad), pen=pg.mkPen(color='#2ca02c', width=1.5))
+            self.plt_roll.plot(t_att, np.degrees(np.arctan2(2.0 * (q0 * q1 + q2 * q3), 1.0 - 2.0 * (q1 * q1 + q2 * q2))), pen=pg.mkPen(color='#d84b20', width=1.5))
+            self.plt_pitch.plot(t_att, np.degrees(np.arcsin(np.clip(2.0 * (q0 * q2 - q3 * q1), -1.0, 1.0))), pen=pg.mkPen(color='#2ca02c', width=1.5))
         except: pass
+
+        # --- 3. GÜÇ VE BATARYA ---
+        try:
+            battery = ulog.get_dataset('battery_status')
+            t_bat = (battery.data['timestamp'] - ulog.start_timestamp) / 1e6
+            voltage = battery.data['voltage_v']
+            current = battery.data['current_a']
+            
+            # Voltaj ve Akımı aynı grafikte, farklı renklerle çizdiriyoruz
+            self.plt_guc.plot(t_bat, voltage, pen=pg.mkPen(color='#d84b20', width=1.5))
+            self.plt_guc.plot(t_bat, current, pen=pg.mkPen(color='#2ca02c', width=1.5))
+        except Exception as e:
+            print("Batarya verisi çizilemedi:", e)
