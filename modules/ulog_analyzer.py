@@ -62,11 +62,8 @@ class ULogAnalyzerWidget(QWidget):
         olay.ignore() 
 
     def optimizasyon_uygula(self, plt):
-        """Grafiklerin kasmasını önleyen PyQtGraph performans ayarları"""
         plt.showGrid(x=True, y=True, alpha=0.3)
-        # Sadece ekranda görünen kısmı hesapla
         plt.setClipToView(True)
-        # Uzaktan bakarken veriyi seyrelt (tepe noktalarını koruyarak)
         plt.setDownsampling(auto=True, mode='peak')
 
     def bilgi_paneli_olustur(self, baslik, aciklama, renk="#00c3ff"):
@@ -100,7 +97,22 @@ class ULogAnalyzerWidget(QWidget):
         self.optimizasyon_uygula(self.plt_alt)
         self.scroll_duzen.addWidget(gl_irtifa)
         
-        # 2. TUTUM
+        # 2. HIZ (VELOCITY) - YENİ EKLENEN KISIM
+        hiz_bilgi = self.bilgi_paneli_olustur(
+            "💨 Hız Tahmini (Velocity X, Y, Z)", 
+            "Açıklama: Aracın yerel koordinat sistemindeki ileri/geri (X), sağa/sola (Y) ve dikey (Z) hareket hızlarını metre/saniye (m/s) cinsinden gösterir. Otonom rotadaki hızlanma (ivmelenme) ve frenleme davranışlarını analiz etmek için kullanılır.", 
+            renk="#3498db"
+        )
+        self.scroll_duzen.addWidget(hiz_bilgi)
+        
+        gl_hiz = pg.GraphicsLayoutWidget()
+        gl_hiz.setMinimumHeight(250)
+        gl_hiz.wheelEvent = self.tekerlek_iptal 
+        self.plt_hiz = gl_hiz.addPlot(title="Velocity [m/s] | <span style='color: #d84b20;'>Vx (İleri)</span> | <span style='color: #2ca02c;'>Vy (Yan)</span> | <span style='color: #00c3ff;'>Vz (Dikey)</span>")
+        self.optimizasyon_uygula(self.plt_hiz)
+        self.scroll_duzen.addWidget(gl_hiz)
+
+        # 3. TUTUM
         tutum_bilgi = self.bilgi_paneli_olustur(
             "📐 Araç Tutumu (Roll & Pitch Angles)", 
             "Açıklama: Otonom sistemin uçuş sırasındaki yatay eksen dengesini gösterir. Roll (sağ/sol yatış) ve Pitch (ön/arka yunuslama) açılarının davranışı, rüzgar direncinin etkisini ve PID kontrol algoritmasının kararlılığını (stability) ifade eder.", 
@@ -119,7 +131,7 @@ class ULogAnalyzerWidget(QWidget):
         self.optimizasyon_uygula(self.plt_pitch)
         self.scroll_duzen.addWidget(gl_tutum)
 
-        # 3. GÜÇ VE BATARYA
+        # 4. GÜÇ VE BATARYA
         guc_bilgi = self.bilgi_paneli_olustur(
             "🔋 Güç ve Batarya Tüketimi (Power)", 
             "Açıklama: Aracın güç modülü üzerinden okunan anlık batarya voltajı (V) ve çekilen akım (A) değerleridir. Ani akım sıçramaları motorların zorlandığı anları, voltaj düşümleri ise bataryanın deşarj eğilimini gösterir.", 
@@ -134,10 +146,10 @@ class ULogAnalyzerWidget(QWidget):
         self.optimizasyon_uygula(self.plt_guc)
         self.scroll_duzen.addWidget(gl_guc)
         
-        # 4. MOTOR ÇIKIŞLARI
+        # 5. MOTOR ÇIKIŞLARI
         motor_bilgi = self.bilgi_paneli_olustur(
             "⚙️ Motor Çıkışları (Actuator Outputs)", 
-            "Açıklama: Uçuş kontrolcüsünün (ESC'ler üzerinden) motorlara gönderdiği anlık güç sinyalleridir (genellikle 0 ile 1 arasında veya PWM). Sürekli ayrışan veya çok yüksek çalışan bir motor çizgisi; ağırlık merkezindeki (CG) kaymayı, pervane hasarını veya iskelet titreşimlerini işaret eder.", 
+            "Açıklama: Uçuş kontrolcüsünün (ESC'ler üzerinden) motorlara gönderdiği anlık güç sinyalleridir. Sürekli ayrışan veya çok yüksek çalışan bir motor çizgisi; ağırlık merkezindeki (CG) kaymayı veya pervane hasarını işaret eder.", 
             renk="#9b59b6"
         )
         self.scroll_duzen.addWidget(motor_bilgi)
@@ -167,17 +179,32 @@ class ULogAnalyzerWidget(QWidget):
 
     def grafik_ciz(self, dosya_yolu):
         ulog = ULog(dosya_yolu)
+        
+        # Eski verileri temizle
         self.plt_alt.clear()
+        self.plt_hiz.clear()
         self.plt_roll.clear()
         self.plt_pitch.clear()
         self.plt_guc.clear()
         self.plt_motor.clear()
 
-        # --- 1. İRTİFA ---
+        # --- 1. İRTİFA VE HIZ ---
         try:
             local_pos = ulog.get_dataset('vehicle_local_position')
-            self.plt_alt.plot((local_pos.data['timestamp'] - ulog.start_timestamp) / 1e6, -local_pos.data['z'], pen=pg.mkPen(color='#00c3ff', width=1.5))
-        except: pass
+            t_local = (local_pos.data['timestamp'] - ulog.start_timestamp) / 1e6
+            
+            # İrtifa (-Z)
+            self.plt_alt.plot(t_local, -local_pos.data['z'], pen=pg.mkPen(color='#00c3ff', width=1.5))
+            
+            # Hız (Vx, Vy, Vz)
+            vx = local_pos.data['vx']
+            vy = local_pos.data['vy']
+            vz = local_pos.data['vz']
+            self.plt_hiz.plot(t_local, vx, pen=pg.mkPen(color='#d84b20', width=1.5)) # Turuncu (X)
+            self.plt_hiz.plot(t_local, vy, pen=pg.mkPen(color='#2ca02c', width=1.5)) # Yeşil (Y)
+            self.plt_hiz.plot(t_local, vz, pen=pg.mkPen(color='#00c3ff', width=1.5)) # Mavi (Z)
+        except Exception as e:
+            print("İrtifa veya Hız verisi çizilemedi:", e)
 
         # --- 2. TUTUM ---
         try:
@@ -202,11 +229,7 @@ class ULogAnalyzerWidget(QWidget):
         try:
             motors = ulog.get_dataset('actuator_motors')
             t_mot = (motors.data['timestamp'] - ulog.start_timestamp) / 1e6
-            m1 = motors.data['control[0]']
-            m2 = motors.data['control[1]']
-            m3 = motors.data['control[2]']
-            m4 = motors.data['control[3]']
-            
+            m1, m2, m3, m4 = motors.data['control[0]'], motors.data['control[1]'], motors.data['control[2]'], motors.data['control[3]']
             self.plt_motor.plot(t_mot, m1, pen=pg.mkPen(color='#d84b20', width=1.5))
             self.plt_motor.plot(t_mot, m2, pen=pg.mkPen(color='#2ca02c', width=1.5))
             self.plt_motor.plot(t_mot, m3, pen=pg.mkPen(color='#00c3ff', width=1.5))
@@ -215,14 +238,9 @@ class ULogAnalyzerWidget(QWidget):
             try:
                 outputs = ulog.get_dataset('actuator_outputs')
                 t_out = (outputs.data['timestamp'] - ulog.start_timestamp) / 1e6
-                o1 = outputs.data['output[0]']
-                o2 = outputs.data['output[1]']
-                o3 = outputs.data['output[2]']
-                o4 = outputs.data['output[3]']
-                
+                o1, o2, o3, o4 = outputs.data['output[0]'], outputs.data['output[1]'], outputs.data['output[2]'], outputs.data['output[3]']
                 self.plt_motor.plot(t_out, o1, pen=pg.mkPen(color='#d84b20', width=1.5))
                 self.plt_motor.plot(t_out, o2, pen=pg.mkPen(color='#2ca02c', width=1.5))
                 self.plt_motor.plot(t_out, o3, pen=pg.mkPen(color='#00c3ff', width=1.5))
                 self.plt_motor.plot(t_out, o4, pen=pg.mkPen(color='#f1c40f', width=1.5))
-            except Exception as e:
-                print("Motor verisi çizilemedi:", e)
+            except: pass
