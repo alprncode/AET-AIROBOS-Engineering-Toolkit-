@@ -40,7 +40,20 @@ class ULogAnalyzerWidget(QWidget):
         kontrol_duzeni.addWidget(self.yukle_butonu)
         ana_duzen.addLayout(kontrol_duzeni)
         
-        # --- GELİŞMİŞ UÇUŞ ÖZET TABLOSU (SUMMARY CARD) ---
+        # --- SCROLL ALANI ---
+        self.scroll_alani = QScrollArea()
+        self.scroll_alani.setWidgetResizable(True)
+        self.scroll_alani.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
+        
+        self.scroll_icerik = QWidget()
+        self.scroll_duzen = QVBoxLayout(self.scroll_icerik)
+        self.scroll_duzen.setSpacing(25)
+        self.scroll_duzen.setContentsMargins(0, 10, 15, 10)
+        
+        self.scroll_alani.setWidget(self.scroll_icerik)
+        ana_duzen.addWidget(self.scroll_alani)
+
+        # --- GELİŞMİŞ UÇUŞ ÖZET TABLOSU ---
         self.ozet_kutusu = QFrame()
         self.ozet_kutusu.setStyleSheet("""
             QFrame { background-color: #151a28; border: 1px solid #1e293b; border-radius: 8px; padding: 15px; }
@@ -48,11 +61,10 @@ class ULogAnalyzerWidget(QWidget):
         self.ozet_grid = QGridLayout(self.ozet_kutusu)
         self.ozet_grid.setSpacing(12)
         
-        # Sütun genişliklerini ayarlayarak verilerin yan yana düzgün durmasını sağlıyoruz
-        self.ozet_grid.setColumnStretch(0, 1) # Sol Etiket
-        self.ozet_grid.setColumnStretch(1, 3) # Sol Veri
-        self.ozet_grid.setColumnStretch(2, 1) # Sağ Etiket
-        self.ozet_grid.setColumnStretch(3, 3) # Sağ Veri
+        self.ozet_grid.setColumnStretch(0, 1)
+        self.ozet_grid.setColumnStretch(1, 3)
+        self.ozet_grid.setColumnStretch(2, 1)
+        self.ozet_grid.setColumnStretch(3, 3)
         
         self.ozet_etiketler = {}
         ozet_alanlar = [
@@ -81,20 +93,7 @@ class ULogAnalyzerWidget(QWidget):
             self.ozet_grid.addWidget(lbl_val, r, c+1)
             self.ozet_etiketler[anahtar] = lbl_val
             
-        ana_duzen.addWidget(self.ozet_kutusu)
-
-        # --- SCROLL ALANI ---
-        self.scroll_alani = QScrollArea()
-        self.scroll_alani.setWidgetResizable(True)
-        self.scroll_alani.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
-        
-        self.scroll_icerik = QWidget()
-        self.scroll_duzen = QVBoxLayout(self.scroll_icerik)
-        self.scroll_duzen.setSpacing(25)
-        self.scroll_duzen.setContentsMargins(0, 10, 15, 10)
-        
-        self.scroll_alani.setWidget(self.scroll_icerik)
-        ana_duzen.addWidget(self.scroll_alani)
+        self.scroll_duzen.addWidget(self.ozet_kutusu)
         
         pg.setConfigOption('background', '#121212')
         pg.setConfigOption('foreground', '#e0e0e0')
@@ -138,8 +137,9 @@ class ULogAnalyzerWidget(QWidget):
         lbl_baslik = QLabel(baslik)
         lbl_baslik.setStyleSheet("font-size: 15px; font-weight: bold; color: #ffffff; border: none; background: transparent;")
         lbl_aciklama = QLabel(aciklama)
-        lbl_aciklama.setStyleSheet("font-size: 12px; color: #a2a8d3; border: none; background: transparent;")
+        lbl_aciklama.setStyleSheet("font-size: 12px; color: #a2a8d3; border: none; background: transparent; line-height: 1.4;")
         lbl_aciklama.setWordWrap(True)
+        lbl_aciklama.setTextFormat(Qt.RichText)
         
         duzen.addWidget(lbl_baslik)
         duzen.addWidget(lbl_aciklama)
@@ -147,7 +147,15 @@ class ULogAnalyzerWidget(QWidget):
 
     def arayuzu_olustur(self):
         # 1. İRTİFA
-        irtifa_bilgi = self.bilgi_paneli_olustur("✈️ İrtifa Tahmini (Altitude Estimate)", "Açıklama: Aracın dikey yüksekliğidir. Renkler: ■ Mavi: Fused Altitude")
+        irtifa_aciklama = (
+            "Açıklama: Aracın kalkış noktasına veya deniz seviyesine (MSL) göre hesaplanan dikey yüksekliğidir. "
+            "Fused Altitude, otopilotun barometre ve GPS verilerini Kalman Filtresi (EKF2) ile birleştirerek oluşturduğu "
+            "filtrelenmiş, gürültüden arındırılmış net irtifa değerini temsil eder. "
+            "Sürekli bir tırmanış veya inişin ne kadar stabil gerçekleştiğini bu grafikten gözlemleyebilirsiniz."
+            "Grafik Renkleri:"
+            "■ Mavi Çizgi: Fused Altitude (Filtrelenmiş Net İrtifa)"
+        )
+        irtifa_bilgi = self.bilgi_paneli_olustur("✈️ İrtifa Tahmini (Altitude Estimate)", irtifa_aciklama)
         self.scroll_duzen.addWidget(irtifa_bilgi)
         
         gl_irtifa = pg.GraphicsLayoutWidget()
@@ -158,7 +166,16 @@ class ULogAnalyzerWidget(QWidget):
         self.scroll_duzen.addWidget(gl_irtifa)
         
         # 2. HIZ (VELOCITY)
-        hiz_bilgi = self.bilgi_paneli_olustur("💨 Hız Tahmini (Velocity X, Y, Z)", "Açıklama: Aracın hareket hızları. Renkler: ■ Turuncu: Vx, ■ Yeşil: Vy, ■ Mavi: Vz", renk="#3498db")
+        hiz_aciklama = (
+            "Açıklama: Aracın yerel koordinat sistemindeki ileri/geri (X), sağa/sola (Y) ve dikey (Z) "
+            "hareket hızlarını metre/saniye (m/s) cinsinden gösterir. Otonom rotadaki ivmelenme, rüzgara karşı verilen "
+            "tepkiler, hedefe ulaşırken yapılan frenlemeler ve 'overshoot' (hedefi aşıp geri dönme) hataları bu alandan analiz edilir."
+            "Grafik Renkleri:"
+            "■ Turuncu Çizgi: Vx (İleri/Geri Hız)"
+            "■ Yeşil Çizgi: Vy (Sağ/Sol Hız)"
+            "■ Mavi Çizgi: Vz (Aşağı/Yukarı Dikey Hız)"
+        )
+        hiz_bilgi = self.bilgi_paneli_olustur("💨 Hız Tahmini (Velocity X, Y, Z)", hiz_aciklama, renk="#3498db")
         self.scroll_duzen.addWidget(hiz_bilgi)
         
         gl_hiz = pg.GraphicsLayoutWidget()
@@ -169,7 +186,16 @@ class ULogAnalyzerWidget(QWidget):
         self.scroll_duzen.addWidget(gl_hiz)
 
         # 3. TUTUM
-        tutum_bilgi = self.bilgi_paneli_olustur("📐 Araç Tutumu (Roll & Pitch Angles)", "Açıklama: Aracın yatay eksen dengesi. Renkler: ■ Turuncu: Roll, ■ Yeşil: Pitch", renk="#2ca02c")
+        tutum_aciklama = (
+            "Açıklama: Otonom sistemin uçuş sırasındaki yatay eksen dengesini gösterir. Roll (sağ/sol yatış) "
+            "ve Pitch (ön/arka yunuslama) açılarının davranışı, rüzgar direncinin etkisini ve PID kontrol algoritmasının "
+            "kararlılığını (stability) ifade eder. Açılarda sürekli ve hızlı bir salınım varsa (oscillation), PID değerlerinin "
+            "çok yüksek olduğu veya mekanik bir dengesizlik olduğu anlaşılabilir."
+            "Grafik Renkleri:"
+            "■ Turuncu Çizgi: Roll Angle (Sağa/Sola Yuvarlanma Açısı)"
+            "■ Yeşil Çizgi: Pitch Angle (Öne/Arkaya Yunuslama Açısı)"
+        )
+        tutum_bilgi = self.bilgi_paneli_olustur("📐 Araç Tutumu (Roll & Pitch Angles)", tutum_aciklama, renk="#2ca02c")
         self.scroll_duzen.addWidget(tutum_bilgi)
         
         gl_tutum = pg.GraphicsLayoutWidget()
@@ -183,7 +209,15 @@ class ULogAnalyzerWidget(QWidget):
         self.scroll_duzen.addWidget(gl_tutum)
 
         # 4. GÜÇ VE BATARYA
-        guc_bilgi = self.bilgi_paneli_olustur("🔋 Güç ve Batarya Tüketimi (Power)", "Açıklama: Anlık güç tüketimi. Renkler: ■ Turuncu: Voltaj [V], ■ Yeşil: Akım [A]", renk="#f1c40f")
+        guc_aciklama = (
+            "Açıklama: Aracın güç modülü üzerinden okunan anlık batarya voltajı (V) ve sistemden çekilen "
+            "toplam akım (A) değerleridir. Ani akım sıçramaları motorların zorlandığı (sert manevra, şiddetli rüzgar) "
+            "anları gösterirken, voltajdaki sert düşüşler (voltage sag) bataryanın deşarj eğilimini ve iç direncini yansıtır."
+            "Grafik Renkleri:"
+            "■ Turuncu Çizgi: Batarya Voltajı [V]"
+            "■ Yeşil Çizgi: Çekilen Toplam Akım [A]"
+        )
+        guc_bilgi = self.bilgi_paneli_olustur("🔋 Güç ve Batarya Tüketimi (Power)", guc_aciklama, renk="#f1c40f")
         self.scroll_duzen.addWidget(guc_bilgi)
         
         gl_guc = pg.GraphicsLayoutWidget()
@@ -194,7 +228,18 @@ class ULogAnalyzerWidget(QWidget):
         self.scroll_duzen.addWidget(gl_guc)
         
         # 5. MOTOR ÇIKIŞLARI
-        motor_bilgi = self.bilgi_paneli_olustur("⚙️ Motor Çıkışları (Actuator Outputs)", "Açıklama: ESC'lere giden sinyaller. Renkler: ■ Turuncu: M1, ■ Yeşil: M2, ■ Mavi: M3, ■ Sarı: M4", renk="#9b59b6")
+        motor_aciklama = (
+            "Açıklama: Uçuş kontrolcüsünün ESC'ler aracılığıyla motorlara gönderdiği anlık güç sinyalleridir "
+            "(genellikle PWM veya 0.0 - 1.0 arası değerler). Eğer bir motor çizgisi diğerlerinden belirgin şekilde yüksekte "
+            "kalıyorsa (çok güç çekiyorsa); ağırlık merkezinde (CG) kayma, o motora bağlı pervanede hasar veya şasede asimetrik "
+            "bir rüzgar direnci var demektir."
+            "Grafik Renkleri:"
+            "■ Turuncu: Motor 1 | "
+            "■ Yeşil: Motor 2 | "
+            "■ Mavi: Motor 3 | "
+            "■ Sarı: Motor 4"
+        )
+        motor_bilgi = self.bilgi_paneli_olustur("⚙️ Motor Çıkışları (Actuator Outputs)", motor_aciklama, renk="#9b59b6")
         self.scroll_duzen.addWidget(motor_bilgi)
         
         gl_motor = pg.GraphicsLayoutWidget()
@@ -205,7 +250,19 @@ class ULogAnalyzerWidget(QWidget):
         self.scroll_duzen.addWidget(gl_motor)
 
         # 6. TİTREŞİM (VIBRATION)
-        vib_bilgi = self.bilgi_paneli_olustur("📳 Titreşim Analizi (Vibration Metrics)", "Açıklama: Mekanik titreşim seviyeleri. Renkler: ■ Kırmızı: Accel, ■ Turuncu: Gyro. Bölgeler: ■ Yeşil: Güvenli, ■ Sarı: Uyarı, ■ Kırmızı: Kritik.", renk="#e74c3c")
+        vib_aciklama = (
+            "Açıklama: Aracın iskeletindeki mekanik titreşim seviyelerini m/s² cinsinden gösterir. "
+            "Yüksek titreşim değerleri; pervanelerdeki balanssızlığı, motor montaj sorunlarını veya uçuş kontrolcüsünün "
+            "sensör izolasyonundaki zayıflıkları işaret eder. Aşırı titreşim, EKF2'nin (yönelim hesabının) bozulmasına yol açar."
+            "Grafik Renkleri:"
+            "■ Kırmızı Çizgi: İvmeölçer (Accel) Titreşimi"
+            "■ Turuncu Çizgi: Jiroskop (Gyro) Titreşimi"
+            "Güvenlik Bölgeleri (Arka Plan):"
+            "■ Yeşil Alan (0-5): Güvenli Titreşim Seviyesi"
+            "■ Sarı Alan (5-10): Uyarı Seviyesi (Mekanikler İncelenmeli)"
+            "■ Kırmızı Alan (10+): Kritik Titreşim (Uçuş İçin Tehlikeli)"
+        )
+        vib_bilgi = self.bilgi_paneli_olustur("📳 Titreşim Analizi (Vibration Metrics)", vib_aciklama, renk="#e74c3c")
         self.scroll_duzen.addWidget(vib_bilgi)
         
         gl_vib = pg.GraphicsLayoutWidget()
@@ -252,7 +309,6 @@ class ULogAnalyzerWidget(QWidget):
         # --- METADATA İSTATİSTİKLERİNİ HESAPLA ---
         info = ulog.msg_info_dict
         
-        # Sol Sütun Verileri
         hardware = info.get('ver_hw', 'Bilinmiyor')
         
         sw_hash = info.get('ver_sw', '')
@@ -267,7 +323,6 @@ class ULogAnalyzerWidget(QWidget):
         
         uuid = info.get('sys_uuid', 'Bilinmiyor')
         
-        # Zaman Hesaplamaları
         dur_s = int((ulog.last_timestamp - ulog.start_timestamp) / 1e6)
         m, s = divmod(dur_s, 60)
         h, m = divmod(m, 60)
@@ -283,7 +338,6 @@ class ULogAnalyzerWidget(QWidget):
         except:
             log_start = "Bilinmiyor"
             
-        # Dropouts
         try:
             dropouts = ulog.dropouts
             if dropouts:
@@ -294,7 +348,6 @@ class ULogAnalyzerWidget(QWidget):
         except:
             drop_str = "0 (0 s)"
 
-        # Sağ Sütun Verileri (Hesaplamalar)
         distance_str, max_alt_diff, avg_speed, max_speed = "0.0 m", "0.0 m", "0.0 km/h", "0.0 km/h"
         max_speed_horiz, max_speed_up, max_speed_down, max_tilt = "0.0 km/h", "0.0 km/h", "0.0 km/h", "0.0 deg"
 
@@ -328,7 +381,6 @@ class ULogAnalyzerWidget(QWidget):
             max_tilt = f"{np.max(tilt):.1f} deg"
         except: pass
 
-        # Tabloyu Güncelle
         self.ozet_etiketler["Airframe:"].setText("Generic Quadcopter\nQuadrotor x (4001)")
         self.ozet_etiketler["Hardware:"].setText(str(hardware))
         self.ozet_etiketler["Software Version:"].setText(sw_ver)
@@ -362,7 +414,6 @@ class ULogAnalyzerWidget(QWidget):
 
         max_t = (ulog.last_timestamp - ulog.start_timestamp) / 1e6
 
-        # 1. İRTİFA VE HIZ
         try:
             local_pos = ulog.get_dataset('vehicle_local_position')
             t_local = (local_pos.data['timestamp'] - ulog.start_timestamp) / 1e6
@@ -372,16 +423,14 @@ class ULogAnalyzerWidget(QWidget):
             self.plt_hiz.plot(t_local, local_pos.data['vz'], pen=pg.mkPen(color='#00c3ff', width=1.5)) 
         except: pass
 
-        # 2. TUTUM
         try:
             attitude = ulog.get_dataset('vehicle_attitude')
             t_att = (attitude.data['timestamp'] - ulog.start_timestamp) / 1e6
-            q0, q1, q2, q3 = attitude.data['q[0]'], attitude.data['q[1]'], attitude.data['q[2]'], attitude.data['q[3]']
+            q0, q1, q2, q3 = att.data['q[0]'], att.data['q[1]'], att.data['q[2]'], att.data['q[3]']
             self.plt_roll.plot(t_att, np.degrees(np.arctan2(2.0 * (q0 * q1 + q2 * q3), 1.0 - 2.0 * (q1 * q1 + q2 * q2))), pen=pg.mkPen(color='#d84b20', width=1.5))
             self.plt_pitch.plot(t_att, np.degrees(np.arcsin(np.clip(2.0 * (q0 * q2 - q3 * q1), -1.0, 1.0))), pen=pg.mkPen(color='#2ca02c', width=1.5))
         except: pass
 
-        # 3. GÜÇ VE BATARYA
         try:
             battery = ulog.get_dataset('battery_status')
             t_bat = (battery.data['timestamp'] - ulog.start_timestamp) / 1e6
@@ -389,7 +438,6 @@ class ULogAnalyzerWidget(QWidget):
             self.plt_guc.plot(t_bat, battery.data['current_a'], pen=pg.mkPen(color='#2ca02c', width=1.5))
         except: pass
 
-        # 4. MOTOR ÇIKIŞLARI
         try:
             motors = ulog.get_dataset('actuator_motors')
             t_mot = (motors.data['timestamp'] - ulog.start_timestamp) / 1e6
@@ -407,7 +455,6 @@ class ULogAnalyzerWidget(QWidget):
                 self.plt_motor.plot(t_out, outputs.data['output[3]'], pen=pg.mkPen(color='#f1c40f', width=1.5))
             except: pass
 
-        # 5. TİTREŞİM
         try:
             imu_status = ulog.get_dataset('vehicle_imu_status')
             t_vib = (imu_status.data['timestamp'] - ulog.start_timestamp) / 1e6
