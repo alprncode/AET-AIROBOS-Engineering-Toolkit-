@@ -67,31 +67,34 @@ class ULogAnalyzerWidget(QWidget):
         plt.setDownsampling(auto=True, mode='peak')
 
     def sinirlari_kilitle(self, plt, max_time):
-        """Grafiğin sonsuzluğa doğru uzaklaştırılmasını (kaybolmasını) engeller"""
+        """Grafiğin kaybolmasını engellerken, kullanıcıya çok daha esnek bir gezinti alanı sunar"""
         y_min = float('inf')
         y_max = float('-inf')
         
-        # Grafikteki tüm çizgilere bakarak Y ekseninin sınırlarını bul
         for item in plt.listDataItems():
             x_data, y_data = item.getData()
             if y_data is not None and len(y_data) > 0:
                 y_min = min(y_min, np.nanmin(y_data))
                 y_max = max(y_max, np.nanmax(y_data))
         
-        # X ekseninde (zaman) uçuştan maksimum %10 daha fazla uzaklaşabilsin
-        # Y ekseninde mevcut verinin maksimum 3 katı kadar uzaklaşabilsin
         if y_min != float('inf') and y_max != float('-inf'):
-            y_fark = max(y_max - y_min, 1.0) # Düz çizgiler için matematiksel güvenlik
+            y_fark = max(y_max - y_min, 1.0)
+            
+            # X ekseninde sağa/sola %50 oranında devasa bir boşluk
+            x_esneklik = max_time * 0.5
+            # Y ekseninde yukarı/aşağı grafiğin boyutu kadar (%200) büyük bir boşluk
+            y_esneklik = y_fark * 2.0
+            
             plt.setLimits(
-                xMin=-max_time * 0.05, 
-                xMax=max_time * 1.05, 
-                maxXRange=max_time * 1.1,
-                yMin=y_min - y_fark, 
-                yMax=y_max + y_fark, 
-                maxYRange=y_fark * 3
+                xMin=-x_esneklik, 
+                xMax=max_time + x_esneklik, 
+                maxXRange=max_time * 2.5,  # Maksimum zoom out kapasitesi artırıldı
+                yMin=y_min - y_esneklik, 
+                yMax=y_max + y_esneklik, 
+                maxYRange=y_fark * 6.0   # Y ekseninde daha da uzağa çıkabilme izni verildi
             )
         else:
-            plt.setLimits(xMin=-10, xMax=max_time + 10, maxXRange=max_time * 1.2)
+            plt.setLimits(xMin=-10, xMax=max_time + 10, maxXRange=max_time * 3.0)
 
     def bilgi_paneli_olustur(self, baslik, aciklama, renk="#00c3ff"):
         kutu = QFrame()
@@ -194,7 +197,6 @@ class ULogAnalyzerWidget(QWidget):
         self.plt_guc.clear()
         self.plt_motor.clear()
 
-        # Global zaman sınırını bulalım
         max_t = (ulog.last_timestamp - ulog.start_timestamp) / 1e6
 
         # --- 1. İRTİFA VE HIZ ---
@@ -242,6 +244,5 @@ class ULogAnalyzerWidget(QWidget):
                 self.plt_motor.plot(t_out, outputs.data['output[3]'], pen=pg.mkPen(color='#f1c40f', width=1.5))
             except: pass
 
-        # En kritik adım: Çizim bittikten sonra sınırları kilitliyoruz!
         for plt in [self.plt_alt, self.plt_hiz, self.plt_roll, self.plt_pitch, self.plt_guc, self.plt_motor]:
             self.sinirlari_kilitle(plt, max_t)
