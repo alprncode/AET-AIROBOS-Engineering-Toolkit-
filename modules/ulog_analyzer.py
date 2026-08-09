@@ -150,8 +150,7 @@ class ULogAnalyzerWidget(QWidget):
         irtifa_aciklama = (
             "Açıklama: Aracın kalkış noktasına veya deniz seviyesine (MSL) göre hesaplanan dikey yüksekliğidir. "
             "Fused Altitude, otopilotun barometre ve GPS verilerini Kalman Filtresi (EKF2) ile birleştirerek oluşturduğu "
-            "filtrelenmiş, gürültüden arındırılmış net irtifa değerini temsil eder. "
-            "Sürekli bir tırmanış veya inişin ne kadar stabil gerçekleştiğini bu grafikten gözlemleyebilirsiniz."
+            "filtrelenmiş, gürültüden arındırılmış net irtifa değerini temsil eder."
             "Grafik Renkleri:"
             "■ Mavi Çizgi: Fused Altitude (Filtrelenmiş Net İrtifa)"
         )
@@ -169,7 +168,7 @@ class ULogAnalyzerWidget(QWidget):
         hiz_aciklama = (
             "Açıklama: Aracın yerel koordinat sistemindeki ileri/geri (X), sağa/sola (Y) ve dikey (Z) "
             "hareket hızlarını metre/saniye (m/s) cinsinden gösterir. Otonom rotadaki ivmelenme, rüzgara karşı verilen "
-            "tepkiler, hedefe ulaşırken yapılan frenlemeler ve 'overshoot' (hedefi aşıp geri dönme) hataları bu alandan analiz edilir."
+            "tepkiler ve hedefe ulaşırken yapılan frenlemeler bu alandan analiz edilir."
             "Grafik Renkleri:"
             "■ Turuncu Çizgi: Vx (İleri/Geri Hız)"
             "■ Yeşil Çizgi: Vy (Sağ/Sol Hız)"
@@ -185,12 +184,11 @@ class ULogAnalyzerWidget(QWidget):
         self.optimizasyon_uygula(self.plt_hiz)
         self.scroll_duzen.addWidget(gl_hiz)
 
-        # 3. TUTUM
+        # 3. TUTUM (ATTITUDE)
         tutum_aciklama = (
             "Açıklama: Otonom sistemin uçuş sırasındaki yatay eksen dengesini gösterir. Roll (sağ/sol yatış) "
             "ve Pitch (ön/arka yunuslama) açılarının davranışı, rüzgar direncinin etkisini ve PID kontrol algoritmasının "
-            "kararlılığını (stability) ifade eder. Açılarda sürekli ve hızlı bir salınım varsa (oscillation), PID değerlerinin "
-            "çok yüksek olduğu veya mekanik bir dengesizlik olduğu anlaşılabilir."
+            "kararlılığını (stability) ifade eder."
             "Grafik Renkleri:"
             "■ Turuncu Çizgi: Roll Angle (Sağa/Sola Yuvarlanma Açısı)"
             "■ Yeşil Çizgi: Pitch Angle (Öne/Arkaya Yunuslama Açısı)"
@@ -208,11 +206,41 @@ class ULogAnalyzerWidget(QWidget):
         self.optimizasyon_uygula(self.plt_pitch)
         self.scroll_duzen.addWidget(gl_tutum)
 
-        # 4. GÜÇ VE BATARYA
+        # 4. AÇISAL HIZLAR (ANGULAR RATES) - YENİ
+        rate_aciklama = (
+            "Açıklama: Otonom sistemin Roll, Pitch ve Yaw eksenleri etrafındaki saniyelik dönüş hızlarını (derece/saniye) gösterir. "
+            "Bu veriler aracın manevra agresifliğini, dış etkenlere (rüzgar vb.) karşı verdiği anlık tepkileri ve PID döngüsünün "
+            "'Rate' (Açısal Hız) kontrolcüsünün performansını yansıtır."
+            "Grafik Renkleri:"
+            "■ Turuncu Çizgi: Roll Rate (Yuvarlanma Hızı)"
+            "■ Yeşil Çizgi: Pitch Rate (Yunuslama Hızı)"
+            "■ Mavi Çizgi: Yaw Rate (Sapma Hızı)"
+        )
+        rate_bilgi = self.bilgi_paneli_olustur("🌪️ Açısal Hızlar (Angular Rates)", rate_aciklama, renk="#e67e22")
+        self.scroll_duzen.addWidget(rate_bilgi)
+        
+        gl_rate = pg.GraphicsLayoutWidget()
+        gl_rate.setMinimumHeight(450)
+        gl_rate.wheelEvent = self.tekerlek_iptal 
+        
+        self.plt_roll_rate = gl_rate.addPlot(title="Roll Angular Rate [deg/s]")
+        self.optimizasyon_uygula(self.plt_roll_rate)
+        gl_rate.nextRow()
+        
+        self.plt_pitch_rate = gl_rate.addPlot(title="Pitch Angular Rate [deg/s]")
+        self.optimizasyon_uygula(self.plt_pitch_rate)
+        gl_rate.nextRow()
+        
+        self.plt_yaw_rate = gl_rate.addPlot(title="Yaw Angular Rate [deg/s]")
+        self.optimizasyon_uygula(self.plt_yaw_rate)
+        
+        self.scroll_duzen.addWidget(gl_rate)
+
+        # 5. GÜÇ VE BATARYA
         guc_aciklama = (
             "Açıklama: Aracın güç modülü üzerinden okunan anlık batarya voltajı (V) ve sistemden çekilen "
-            "toplam akım (A) değerleridir. Ani akım sıçramaları motorların zorlandığı (sert manevra, şiddetli rüzgar) "
-            "anları gösterirken, voltajdaki sert düşüşler (voltage sag) bataryanın deşarj eğilimini ve iç direncini yansıtır."
+            "toplam akım (A) değerleridir. Ani akım sıçramaları motorların zorlandığı anları gösterirken, "
+            "voltajdaki sert düşüşler bataryanın deşarj eğilimini yansıtır."
             "Grafik Renkleri:"
             "■ Turuncu Çizgi: Batarya Voltajı [V]"
             "■ Yeşil Çizgi: Çekilen Toplam Akım [A]"
@@ -227,12 +255,11 @@ class ULogAnalyzerWidget(QWidget):
         self.optimizasyon_uygula(self.plt_guc)
         self.scroll_duzen.addWidget(gl_guc)
         
-        # 5. MOTOR ÇIKIŞLARI
+        # 6. MOTOR ÇIKIŞLARI
         motor_aciklama = (
             "Açıklama: Uçuş kontrolcüsünün ESC'ler aracılığıyla motorlara gönderdiği anlık güç sinyalleridir "
-            "(genellikle PWM veya 0.0 - 1.0 arası değerler). Eğer bir motor çizgisi diğerlerinden belirgin şekilde yüksekte "
-            "kalıyorsa (çok güç çekiyorsa); ağırlık merkezinde (CG) kayma, o motora bağlı pervanede hasar veya şasede asimetrik "
-            "bir rüzgar direnci var demektir."
+            "(0.0 - 1.0 arası değerler). Eğer bir motor çizgisi diğerlerinden belirgin şekilde yüksekte "
+            "kalıyorsa; ağırlık merkezinde (CG) kayma veya o motora bağlı pervanede hasar var demektir."
             "Grafik Renkleri:"
             "■ Turuncu: Motor 1 | "
             "■ Yeşil: Motor 2 | "
@@ -249,18 +276,17 @@ class ULogAnalyzerWidget(QWidget):
         self.optimizasyon_uygula(self.plt_motor)
         self.scroll_duzen.addWidget(gl_motor)
 
-        # 6. TİTREŞİM (VIBRATION)
+        # 7. TİTREŞİM (VIBRATION)
         vib_aciklama = (
-            "Açıklama: Aracın iskeletindeki mekanik titreşim seviyelerini m/s² cinsinden gösterir. "
-            "Yüksek titreşim değerleri; pervanelerdeki balanssızlığı, motor montaj sorunlarını veya uçuş kontrolcüsünün "
-            "sensör izolasyonundaki zayıflıkları işaret eder. Aşırı titreşim, EKF2'nin (yönelim hesabının) bozulmasına yol açar."
+            "Açıklama: Aracın iskeletindeki mekanik titreşim seviyelerini gösterir. "
+            "Aşırı titreşim, EKF2'nin (yönelim hesabının) bozulmasına yol açar."
             "Grafik Renkleri:"
             "■ Kırmızı Çizgi: İvmeölçer (Accel) Titreşimi"
             "■ Turuncu Çizgi: Jiroskop (Gyro) Titreşimi"
             "Güvenlik Bölgeleri (Arka Plan):"
             "■ Yeşil Alan (0-5): Güvenli Titreşim Seviyesi"
-            "■ Sarı Alan (5-10): Uyarı Seviyesi (Mekanikler İncelenmeli)"
-            "■ Kırmızı Alan (10+): Kritik Titreşim (Uçuş İçin Tehlikeli)"
+            "■ Sarı Alan (5-10): Uyarı Seviyesi"
+            "■ Kırmızı Alan (10+): Kritik Titreşim"
         )
         vib_bilgi = self.bilgi_paneli_olustur("📳 Titreşim Analizi (Vibration Metrics)", vib_aciklama, renk="#e74c3c")
         self.scroll_duzen.addWidget(vib_bilgi)
@@ -406,6 +432,9 @@ class ULogAnalyzerWidget(QWidget):
         self.plt_hiz.clear()
         self.plt_roll.clear()
         self.plt_pitch.clear()
+        self.plt_roll_rate.clear()
+        self.plt_pitch_rate.clear()
+        self.plt_yaw_rate.clear()
         self.plt_guc.clear()
         self.plt_motor.clear()
         
@@ -414,6 +443,7 @@ class ULogAnalyzerWidget(QWidget):
 
         max_t = (ulog.last_timestamp - ulog.start_timestamp) / 1e6
 
+        # 1. İRTİFA VE HIZ
         try:
             local_pos = ulog.get_dataset('vehicle_local_position')
             t_local = (local_pos.data['timestamp'] - ulog.start_timestamp) / 1e6
@@ -423,6 +453,7 @@ class ULogAnalyzerWidget(QWidget):
             self.plt_hiz.plot(t_local, local_pos.data['vz'], pen=pg.mkPen(color='#00c3ff', width=1.5)) 
         except: pass
 
+        # 2. TUTUM VE AÇISAL HIZLAR
         try:
             attitude = ulog.get_dataset('vehicle_attitude')
             t_att = (attitude.data['timestamp'] - ulog.start_timestamp) / 1e6
@@ -432,12 +463,26 @@ class ULogAnalyzerWidget(QWidget):
         except: pass
 
         try:
+            angular_velocity = ulog.get_dataset('vehicle_angular_velocity')
+            t_ang = (angular_velocity.data['timestamp'] - ulog.start_timestamp) / 1e6
+            roll_rate = np.degrees(angular_velocity.data['xyz[0]'])
+            pitch_rate = np.degrees(angular_velocity.data['xyz[1]'])
+            yaw_rate = np.degrees(angular_velocity.data['xyz[2]'])
+            
+            self.plt_roll_rate.plot(t_ang, roll_rate, pen=pg.mkPen(color='#d84b20', width=1.5))
+            self.plt_pitch_rate.plot(t_ang, pitch_rate, pen=pg.mkPen(color='#2ca02c', width=1.5))
+            self.plt_yaw_rate.plot(t_ang, yaw_rate, pen=pg.mkPen(color='#00c3ff', width=1.5))
+        except: pass
+
+        # 3. GÜÇ VE BATARYA
+        try:
             battery = ulog.get_dataset('battery_status')
             t_bat = (battery.data['timestamp'] - ulog.start_timestamp) / 1e6
             self.plt_guc.plot(t_bat, battery.data['voltage_v'], pen=pg.mkPen(color='#d84b20', width=1.5))
             self.plt_guc.plot(t_bat, battery.data['current_a'], pen=pg.mkPen(color='#2ca02c', width=1.5))
         except: pass
 
+        # 4. MOTOR ÇIKIŞLARI
         try:
             motors = ulog.get_dataset('actuator_motors')
             t_mot = (motors.data['timestamp'] - ulog.start_timestamp) / 1e6
@@ -455,6 +500,7 @@ class ULogAnalyzerWidget(QWidget):
                 self.plt_motor.plot(t_out, outputs.data['output[3]'], pen=pg.mkPen(color='#f1c40f', width=1.5))
             except: pass
 
+        # 5. TİTREŞİM
         try:
             imu_status = ulog.get_dataset('vehicle_imu_status')
             t_vib = (imu_status.data['timestamp'] - ulog.start_timestamp) / 1e6
@@ -462,5 +508,10 @@ class ULogAnalyzerWidget(QWidget):
             self.plt_vib.plot(t_vib, imu_status.data['gyro_vibration_metric'], pen=pg.mkPen(color='#f39c12', width=1.5))
         except: pass
 
-        for plt in [self.plt_alt, self.plt_hiz, self.plt_roll, self.plt_pitch, self.plt_guc, self.plt_motor, self.plt_vib]:
+        grafik_listesi = [
+            self.plt_alt, self.plt_hiz, self.plt_roll, self.plt_pitch, 
+            self.plt_roll_rate, self.plt_pitch_rate, self.plt_yaw_rate, 
+            self.plt_guc, self.plt_motor, self.plt_vib
+        ]
+        for plt in grafik_listesi:
             self.sinirlari_kilitle(plt, max_t)
